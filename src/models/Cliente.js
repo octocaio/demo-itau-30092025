@@ -1,6 +1,7 @@
 const database = require('../config/database');
 const logger = require('../config/logger');
 const { limparCPF, formatarCPF } = require('../utils/cpfValidator');
+const ModelWrapper = require('../utils/modelWrapper');
 
 class Cliente {
     /**
@@ -9,51 +10,43 @@ class Cliente {
      * @returns {Promise<Object>} Cliente criado
      */
     static async criar(dadosCliente) {
-        try {
-            // Limpar CPF antes de salvar (remover formatação)
-            const cpfLimpo = limparCPF(dadosCliente.cpf);
-            
-            const query = `
-                INSERT INTO clientes (
-                    cpf, nome, email, telefone, data_nascimento, 
-                    endereco, cep, cidade, estado
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `;
-            
-            const valores = [
-                cpfLimpo,
-                dadosCliente.nome,
-                dadosCliente.email || null,
-                dadosCliente.telefone || null,
-                dadosCliente.data_nascimento,
-                dadosCliente.endereco || null,
-                dadosCliente.cep || null,
-                dadosCliente.cidade || null,
-                dadosCliente.estado || null
-            ];
-            
-            await database.run(query, valores);
-            
-            logger.info('Cliente criado com sucesso', { cpf: cpfLimpo, nome: dadosCliente.nome });
-            
-            // Retornar o cliente criado
-            return await this.buscarPorCpf(cpfLimpo);
-            
-        } catch (error) {
-            logger.error('Erro ao criar cliente:', error);
-            
-            // Verificar se é erro de CPF duplicado
-            if (error.code === 'SQLITE_CONSTRAINT_PRIMARYKEY') {
-                throw new Error('Cliente com este CPF já existe');
+        return ModelWrapper.executeWithConstraints(
+            async () => {
+                // Limpar CPF antes de salvar (remover formatação)
+                const cpfLimpo = limparCPF(dadosCliente.cpf);
+                
+                const query = `
+                    INSERT INTO clientes (
+                        cpf, nome, email, telefone, data_nascimento, 
+                        endereco, cep, cidade, estado
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `;
+                
+                const valores = [
+                    cpfLimpo,
+                    dadosCliente.nome,
+                    dadosCliente.email || null,
+                    dadosCliente.telefone || null,
+                    dadosCliente.data_nascimento,
+                    dadosCliente.endereco || null,
+                    dadosCliente.cep || null,
+                    dadosCliente.cidade || null,
+                    dadosCliente.estado || null
+                ];
+                
+                await database.run(query, valores);
+                
+                logger.info('Cliente criado com sucesso', { cpf: cpfLimpo, nome: dadosCliente.nome });
+                
+                // Retornar o cliente criado
+                return await this.buscarPorCpf(cpfLimpo);
+            },
+            'criar cliente',
+            {
+                primaryKey: 'Cliente com este CPF já existe',
+                unique: 'Email já está em uso por outro cliente'
             }
-            
-            // Verificar se é erro de email duplicado
-            if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-                throw new Error('Email já está em uso por outro cliente');
-            }
-            
-            throw new Error('Erro interno do servidor ao criar cliente');
-        }
+        );
     }
     
     /**
@@ -62,27 +55,26 @@ class Cliente {
      * @returns {Promise<Object|null>} Cliente encontrado ou null
      */
     static async buscarPorCpf(cpf) {
-        try {
-            const cpfLimpo = limparCPF(cpf);
-            const query = 'SELECT * FROM clientes WHERE cpf = ? AND status = "ATIVO"';
-            
-            const cliente = await database.get(query, [cpfLimpo]);
-            
-            if (cliente) {
-                // Formatar CPF para exibição
-                cliente.cpf = formatarCPF(cliente.cpf);
-                // Converter data para formato brasileiro se necessário
-                if (cliente.data_nascimento) {
-                    cliente.data_nascimento = new Date(cliente.data_nascimento).toISOString().split('T')[0];
+        return ModelWrapper.execute(
+            async () => {
+                const cpfLimpo = limparCPF(cpf);
+                const query = 'SELECT * FROM clientes WHERE cpf = ? AND status = "ATIVO"';
+                
+                const cliente = await database.get(query, [cpfLimpo]);
+                
+                if (cliente) {
+                    // Formatar CPF para exibição
+                    cliente.cpf = formatarCPF(cliente.cpf);
+                    // Converter data para formato brasileiro se necessário
+                    if (cliente.data_nascimento) {
+                        cliente.data_nascimento = new Date(cliente.data_nascimento).toISOString().split('T')[0];
+                    }
                 }
-            }
-            
-            return cliente;
-            
-        } catch (error) {
-            logger.error('Erro ao buscar cliente por CPF:', error);
-            throw new Error('Erro interno do servidor ao buscar cliente');
-        }
+                
+                return cliente;
+            },
+            'buscar cliente por CPF'
+        );
     }
     
     /**
@@ -90,21 +82,20 @@ class Cliente {
      * @returns {Promise<Array>} Lista de clientes
      */
     static async listar() {
-        try {
-            const query = 'SELECT * FROM clientes WHERE status = "ATIVO" ORDER BY nome';
-            const clientes = await database.all(query);
-            
-            // Formatar CPFs para exibição
-            return clientes.map(cliente => ({
-                ...cliente,
-                cpf: formatarCPF(cliente.cpf),
-                data_nascimento: new Date(cliente.data_nascimento).toISOString().split('T')[0]
-            }));
-            
-        } catch (error) {
-            logger.error('Erro ao listar clientes:', error);
-            throw new Error('Erro interno do servidor ao listar clientes');
-        }
+        return ModelWrapper.execute(
+            async () => {
+                const query = 'SELECT * FROM clientes WHERE status = "ATIVO" ORDER BY nome';
+                const clientes = await database.all(query);
+                
+                // Formatar CPFs para exibição
+                return clientes.map(cliente => ({
+                    ...cliente,
+                    cpf: formatarCPF(cliente.cpf),
+                    data_nascimento: new Date(cliente.data_nascimento).toISOString().split('T')[0]
+                }));
+            },
+            'listar clientes'
+        );
     }
     
     /**
@@ -124,7 +115,7 @@ class Cliente {
             }
             
             // Remover campos que não devem ser atualizados
-            const { cpf, created_at, updated_at, ...dadosAtualizacao } = dados;
+            const { cpf: _, created_at, updated_at, ...dadosAtualizacao } = dados;
             
             if (Object.keys(dadosAtualizacao).length === 0) {
                 throw new Error('Nenhum dado para atualizar');
