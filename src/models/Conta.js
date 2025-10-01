@@ -2,6 +2,7 @@ const database = require('../config/database');
 const logger = require('../config/logger');
 const Cliente = require('./Cliente');
 const { limparCPF } = require('../utils/cpfValidator');
+const ModelWrapper = require('../utils/modelWrapper');
 
 class Conta {
     /**
@@ -80,23 +81,22 @@ class Conta {
      * @returns {Promise<Object|null>} Conta encontrada ou null
      */
     static async buscarPorNumero(numeroConta) {
-        try {
-            const query = 'SELECT * FROM contas WHERE numero_conta = ? AND ativa = 1';
-            const conta = await database.get(query, [numeroConta]);
-            
-            if (conta) {
-                // Converter valores numéricos
-                conta.saldo = parseFloat(conta.saldo);
-                conta.limite_diario = parseFloat(conta.limite_diario);
-                conta.ativa = !!conta.ativa;
-            }
-            
-            return conta;
-            
-        } catch (error) {
-            logger.error('Erro ao buscar conta por número:', error);
-            throw new Error('Erro interno do servidor ao buscar conta');
-        }
+        return ModelWrapper.execute(
+            async () => {
+                const query = 'SELECT * FROM contas WHERE numero_conta = ? AND ativa = 1';
+                const conta = await database.get(query, [numeroConta]);
+                
+                if (conta) {
+                    // Converter valores numéricos
+                    conta.saldo = parseFloat(conta.saldo);
+                    conta.limite_diario = parseFloat(conta.limite_diario);
+                    conta.ativa = !!conta.ativa;
+                }
+                
+                return conta;
+            },
+            'buscar conta por número'
+        );
     }
     
     /**
@@ -105,31 +105,30 @@ class Conta {
      * @returns {Promise<Array>} Lista de contas do cliente
      */
     static async listarPorCliente(cpfCliente) {
-        try {
-            const cpfLimpo = limparCPF(cpfCliente);
-            
-            const query = `
-                SELECT c.*, cl.nome as nome_cliente
-                FROM contas c
-                JOIN clientes cl ON c.cpf_cliente = cl.cpf
-                WHERE c.cpf_cliente = ? AND c.ativa = 1
-                ORDER BY c.created_at DESC
-            `;
-            
-            const contas = await database.all(query, [cpfLimpo]);
-            
-            // Formatar valores numéricos
-            return contas.map(conta => ({
-                ...conta,
-                saldo: parseFloat(conta.saldo),
-                limite_diario: parseFloat(conta.limite_diario),
-                ativa: !!conta.ativa
-            }));
-            
-        } catch (error) {
-            logger.error('Erro ao listar contas por cliente:', error);
-            throw new Error('Erro interno do servidor ao listar contas');
-        }
+        return ModelWrapper.execute(
+            async () => {
+                const cpfLimpo = limparCPF(cpfCliente);
+                
+                const query = `
+                    SELECT c.*, cl.nome as nome_cliente
+                    FROM contas c
+                    JOIN clientes cl ON c.cpf_cliente = cl.cpf
+                    WHERE c.cpf_cliente = ? AND c.ativa = 1
+                    ORDER BY c.created_at DESC
+                `;
+                
+                const contas = await database.all(query, [cpfLimpo]);
+                
+                // Formatar valores numéricos
+                return contas.map(conta => ({
+                    ...conta,
+                    saldo: parseFloat(conta.saldo),
+                    limite_diario: parseFloat(conta.limite_diario),
+                    ativa: !!conta.ativa
+                }));
+            },
+            'listar contas por cliente'
+        );
     }
     
     /**
@@ -244,31 +243,30 @@ class Conta {
      * @returns {Promise<Array>} Lista de todas as contas
      */
     static async listar() {
-        try {
-            const query = `
-                SELECT 
-                    c.*,
-                    cl.nome as nome_cliente
-                FROM contas c
-                JOIN clientes cl ON c.cpf_cliente = cl.cpf
-                WHERE c.ativa = 1
-                ORDER BY c.created_at DESC
-            `;
-            
-            const contas = await database.all(query);
-            
-            // Formatar valores numéricos
-            return contas.map(conta => ({
-                ...conta,
-                saldo: parseFloat(conta.saldo),
-                limite_diario: parseFloat(conta.limite_diario),
-                ativa: !!conta.ativa
-            }));
-            
-        } catch (error) {
-            logger.error('Erro ao listar todas as contas:', error);
-            throw new Error('Erro interno do servidor ao listar contas');
-        }
+        return ModelWrapper.execute(
+            async () => {
+                const query = `
+                    SELECT 
+                        c.*,
+                        cl.nome as nome_cliente
+                    FROM contas c
+                    JOIN clientes cl ON c.cpf_cliente = cl.cpf
+                    WHERE c.ativa = 1
+                    ORDER BY c.created_at DESC
+                `;
+                
+                const contas = await database.all(query);
+                
+                // Formatar valores numéricos
+                return contas.map(conta => ({
+                    ...conta,
+                    saldo: parseFloat(conta.saldo),
+                    limite_diario: parseFloat(conta.limite_diario),
+                    ativa: !!conta.ativa
+                }));
+            },
+            'listar todas as contas'
+        );
     }
 }
 

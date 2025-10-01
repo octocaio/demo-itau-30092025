@@ -2,6 +2,7 @@ const Cliente = require('../models/Cliente');
 const logger = require('../config/logger');
 const { clienteSchema, cpfParamSchema } = require('../utils/validators');
 const { asyncHandler } = require('../middleware/errorHandler');
+const ResponseFormatter = require('../utils/responseFormatter');
 
 class ClienteController {
     /**
@@ -12,14 +13,7 @@ class ClienteController {
         // Validar dados de entrada
         const { error, value } = clienteSchema.validate(req.body);
         if (error) {
-            return res.status(400).json({
-                success: false,
-                error: {
-                    message: 'Dados inválidos',
-                    details: error.details.map(detail => detail.message)
-                },
-                timestamp: new Date().toISOString()
-            });
+            return ResponseFormatter.validationError(res, error);
         }
 
         // Criar cliente
@@ -27,12 +21,7 @@ class ClienteController {
 
         logger.info('Cliente criado via API:', { cpf: cliente.cpf, nome: cliente.nome });
 
-        res.status(201).json({
-            success: true,
-            message: 'Cliente criado com sucesso',
-            data: cliente,
-            timestamp: new Date().toISOString()
-        });
+        return ResponseFormatter.created(res, cliente, 'Cliente criado com sucesso');
     });
 
     /**
@@ -43,35 +32,17 @@ class ClienteController {
         // Validar parâmetro CPF
         const { error, value } = cpfParamSchema.validate(req.params);
         if (error) {
-            return res.status(400).json({
-                success: false,
-                error: {
-                    message: 'CPF inválido',
-                    details: error.details.map(detail => detail.message)
-                },
-                timestamp: new Date().toISOString()
-            });
+            return ResponseFormatter.validationError(res, error, 'CPF inválido');
         }
 
         // Buscar cliente
         const cliente = await Cliente.buscarPorCpf(value.cpf);
 
         if (!cliente) {
-            return res.status(404).json({
-                success: false,
-                error: {
-                    message: 'Cliente não encontrado',
-                    code: 404
-                },
-                timestamp: new Date().toISOString()
-            });
+            return ResponseFormatter.notFound(res, 'Cliente');
         }
 
-        res.json({
-            success: true,
-            data: cliente,
-            timestamp: new Date().toISOString()
-        });
+        return ResponseFormatter.success(res, cliente);
     });
 
     /**
@@ -81,12 +52,7 @@ class ClienteController {
     static listarClientes = asyncHandler(async (req, res) => {
         const clientes = await Cliente.listar();
 
-        res.json({
-            success: true,
-            data: clientes,
-            count: clientes.length,
-            timestamp: new Date().toISOString()
-        });
+        return ResponseFormatter.success(res, clientes);
     });
 
     /**
@@ -97,14 +63,7 @@ class ClienteController {
         // Validar parâmetro CPF
         const { error: paramError, value: paramValue } = cpfParamSchema.validate(req.params);
         if (paramError) {
-            return res.status(400).json({
-                success: false,
-                error: {
-                    message: 'CPF inválido',
-                    details: paramError.details.map(detail => detail.message)
-                },
-                timestamp: new Date().toISOString()
-            });
+            return ResponseFormatter.validationError(res, paramError, 'CPF inválido');
         }
 
         // Validar dados de entrada (parcial)
@@ -115,14 +74,7 @@ class ClienteController {
         });
         
         if (bodyError) {
-            return res.status(400).json({
-                success: false,
-                error: {
-                    message: 'Dados inválidos',
-                    details: bodyError.details.map(detail => detail.message)
-                },
-                timestamp: new Date().toISOString()
-            });
+            return ResponseFormatter.validationError(res, bodyError);
         }
 
         // Atualizar cliente
@@ -130,12 +82,7 @@ class ClienteController {
 
         logger.info('Cliente atualizado via API:', { cpf: cliente.cpf });
 
-        res.json({
-            success: true,
-            message: 'Cliente atualizado com sucesso',
-            data: cliente,
-            timestamp: new Date().toISOString()
-        });
+        return ResponseFormatter.success(res, cliente, 'Cliente atualizado com sucesso');
     });
 
     /**
@@ -146,14 +93,7 @@ class ClienteController {
         // Validar parâmetro CPF
         const { error, value } = cpfParamSchema.validate(req.params);
         if (error) {
-            return res.status(400).json({
-                success: false,
-                error: {
-                    message: 'CPF inválido',
-                    details: error.details.map(detail => detail.message)
-                },
-                timestamp: new Date().toISOString()
-            });
+            return ResponseFormatter.validationError(res, error, 'CPF inválido');
         }
 
         // Desativar cliente
@@ -161,11 +101,7 @@ class ClienteController {
 
         logger.info('Cliente desativado via API:', { cpf: value.cpf });
 
-        res.json({
-            success: true,
-            message: 'Cliente desativado com sucesso',
-            timestamp: new Date().toISOString()
-        });
+        return ResponseFormatter.noContent(res, 'Cliente desativado com sucesso');
     });
 }
 

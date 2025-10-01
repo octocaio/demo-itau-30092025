@@ -2,6 +2,7 @@ const Conta = require('../models/Conta');
 const logger = require('../config/logger');
 const { contaSchema, cpfParamSchema, numeroContaParamSchema } = require('../utils/validators');
 const { asyncHandler } = require('../middleware/errorHandler');
+const ResponseFormatter = require('../utils/responseFormatter');
 
 class ContaController {
     /**
@@ -12,14 +13,7 @@ class ContaController {
         // Validar dados de entrada
         const { error, value } = contaSchema.validate(req.body);
         if (error) {
-            return res.status(400).json({
-                success: false,
-                error: {
-                    message: 'Dados inválidos',
-                    details: error.details.map(detail => detail.message)
-                },
-                timestamp: new Date().toISOString()
-            });
+            return ResponseFormatter.validationError(res, error);
         }
 
         // Criar conta
@@ -31,12 +25,7 @@ class ContaController {
             tipo_conta: conta.tipo_conta 
         });
 
-        res.status(201).json({
-            success: true,
-            message: 'Conta criada com sucesso',
-            data: conta,
-            timestamp: new Date().toISOString()
-        });
+        return ResponseFormatter.created(res, conta, 'Conta criada com sucesso');
     });
 
     /**
@@ -47,35 +36,17 @@ class ContaController {
         // Validar parâmetro número da conta
         const { error, value } = numeroContaParamSchema.validate(req.params);
         if (error) {
-            return res.status(400).json({
-                success: false,
-                error: {
-                    message: 'Número da conta inválido',
-                    details: error.details.map(detail => detail.message)
-                },
-                timestamp: new Date().toISOString()
-            });
+            return ResponseFormatter.validationError(res, error, 'Número da conta inválido');
         }
 
         // Buscar conta
         const conta = await Conta.buscarPorNumero(value.numero);
 
         if (!conta) {
-            return res.status(404).json({
-                success: false,
-                error: {
-                    message: 'Conta não encontrada',
-                    code: 404
-                },
-                timestamp: new Date().toISOString()
-            });
+            return ResponseFormatter.notFound(res, 'Conta');
         }
 
-        res.json({
-            success: true,
-            data: conta,
-            timestamp: new Date().toISOString()
-        });
+        return ResponseFormatter.success(res, conta);
     });
 
     /**
@@ -86,14 +57,7 @@ class ContaController {
         // Validar parâmetro número da conta
         const { error, value } = numeroContaParamSchema.validate(req.params);
         if (error) {
-            return res.status(400).json({
-                success: false,
-                error: {
-                    message: 'Número da conta inválido',
-                    details: error.details.map(detail => detail.message)
-                },
-                timestamp: new Date().toISOString()
-            });
+            return ResponseFormatter.validationError(res, error, 'Número da conta inválido');
         }
 
         // Consultar saldo
@@ -101,11 +65,7 @@ class ContaController {
 
         logger.info('Saldo consultado via API:', { numero_conta: value.numero });
 
-        res.json({
-            success: true,
-            data: saldoInfo,
-            timestamp: new Date().toISOString()
-        });
+        return ResponseFormatter.success(res, saldoInfo);
     });
 
     /**
@@ -116,25 +76,13 @@ class ContaController {
         // Validar parâmetro CPF
         const { error, value } = cpfParamSchema.validate(req.params);
         if (error) {
-            return res.status(400).json({
-                success: false,
-                error: {
-                    message: 'CPF inválido',
-                    details: error.details.map(detail => detail.message)
-                },
-                timestamp: new Date().toISOString()
-            });
+            return ResponseFormatter.validationError(res, error, 'CPF inválido');
         }
 
         // Listar contas do cliente
         const contas = await Conta.listarPorCliente(value.cpf);
 
-        res.json({
-            success: true,
-            data: contas,
-            count: contas.length,
-            timestamp: new Date().toISOString()
-        });
+        return ResponseFormatter.success(res, contas);
     });
 
     /**
@@ -144,12 +92,7 @@ class ContaController {
     static listarContas = asyncHandler(async (req, res) => {
         const contas = await Conta.listar();
 
-        res.json({
-            success: true,
-            data: contas,
-            count: contas.length,
-            timestamp: new Date().toISOString()
-        });
+        return ResponseFormatter.success(res, contas);
     });
 
     /**
@@ -160,26 +103,13 @@ class ContaController {
         // Validar parâmetro número da conta
         const { error: paramError, value: paramValue } = numeroContaParamSchema.validate(req.params);
         if (paramError) {
-            return res.status(400).json({
-                success: false,
-                error: {
-                    message: 'Número da conta inválido',
-                    details: paramError.details.map(detail => detail.message)
-                },
-                timestamp: new Date().toISOString()
-            });
+            return ResponseFormatter.validationError(res, paramError, 'Número da conta inválido');
         }
 
         // Validar novo saldo
         const { novo_saldo } = req.body;
         if (typeof novo_saldo !== 'number' || novo_saldo < 0) {
-            return res.status(400).json({
-                success: false,
-                error: {
-                    message: 'Novo saldo deve ser um número maior ou igual a zero'
-                },
-                timestamp: new Date().toISOString()
-            });
+            return ResponseFormatter.error(res, 'Novo saldo deve ser um número maior ou igual a zero');
         }
 
         // Atualizar saldo
@@ -190,12 +120,7 @@ class ContaController {
             novo_saldo: novo_saldo 
         });
 
-        res.json({
-            success: true,
-            message: 'Saldo atualizado com sucesso',
-            data: conta,
-            timestamp: new Date().toISOString()
-        });
+        return ResponseFormatter.success(res, conta, 'Saldo atualizado com sucesso');
     });
 
     /**
@@ -206,14 +131,7 @@ class ContaController {
         // Validar parâmetro número da conta
         const { error, value } = numeroContaParamSchema.validate(req.params);
         if (error) {
-            return res.status(400).json({
-                success: false,
-                error: {
-                    message: 'Número da conta inválido',
-                    details: error.details.map(detail => detail.message)
-                },
-                timestamp: new Date().toISOString()
-            });
+            return ResponseFormatter.validationError(res, error, 'Número da conta inválido');
         }
 
         // Desativar conta
@@ -221,11 +139,7 @@ class ContaController {
 
         logger.info('Conta desativada via API:', { numero_conta: value.numero });
 
-        res.json({
-            success: true,
-            message: 'Conta desativada com sucesso',
-            timestamp: new Date().toISOString()
-        });
+        return ResponseFormatter.noContent(res, 'Conta desativada com sucesso');
     });
 }
 
