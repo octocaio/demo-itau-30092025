@@ -42,7 +42,7 @@ return ResponseFormatter.success(res, clientes);
 //   "message": "Operação realizada com sucesso",
 //   "data": [...],
 //   "count": 10,  // Adicionado automaticamente para arrays
-//   "timestamp": "2025-10-01T03:39:00.000Z"
+//   "timestamp": "2024-10-15T10:30:00.000Z"  // Exemplo de timestamp ISO 8601
 // }
 ```
 
@@ -81,7 +81,7 @@ if (saldo < 0) {
 //     "message": "Saldo não pode ser negativo",
 //     "code": 400
 //   },
-//   "timestamp": "2025-10-01T03:39:00.000Z"
+//   "timestamp": "2024-10-15T10:30:00.000Z"
 // }
 ```
 
@@ -104,7 +104,7 @@ if (error) {
 //     "code": 400,
 //     "details": ["CPF inválido", "Email é obrigatório"]
 //   },
-//   "timestamp": "2025-10-01T03:39:00.000Z"
+//   "timestamp": "2024-10-15T10:30:00.000Z"
 // }
 ```
 
@@ -130,7 +130,7 @@ if (!cliente) {
 //     "message": "Cliente não encontrado",
 //     "code": 404
 //   },
-//   "timestamp": "2025-10-01T03:39:00.000Z"
+//   "timestamp": "2024-10-15T10:30:00.000Z"
 // }
 ```
 
@@ -147,7 +147,7 @@ return ResponseFormatter.noContent(res, 'Cliente desativado com sucesso');
 // {
 //   "success": true,
 //   "message": "Cliente desativado com sucesso",
-//   "timestamp": "2025-10-01T03:39:00.000Z"
+//   "timestamp": "2024-10-15T10:30:00.000Z"
 // }
 ```
 
@@ -326,8 +326,9 @@ class NovoModel {
         return ModelWrapper.executeWithConstraints(
             async () => {
                 const query = 'INSERT INTO tabela (campo) VALUES (?)';
-                await database.run(query, [dados.campo]);
-                return await this.buscarPorId(lastId);
+                const result = await database.run(query, [dados.campo]);
+                // result.id contém o ID gerado pelo SQLite
+                return await this.buscarPorId(result.id);
             },
             'criar registro',
             {
@@ -365,13 +366,13 @@ class NovoModel {
 ### Antes da Refatoração
 - 28+ instâncias de formatação HTTP duplicada
 - 26+ blocos try/catch idênticos
-- ~1.200 linhas de código com duplicação
+- Aproximadamente 1200 linhas de código com duplicação
 - Inconsistências no formato de respostas
 
 ### Após a Refatoração
 - ✅ Zero duplicação de formatação HTTP
 - ✅ Zero duplicação de tratamento de erros
-- ✅ ~800 linhas de código (redução de 33%)
+- ✅ Aproximadamente 800 linhas de código (redução de 33%)
 - ✅ Formato padronizado em 100% das respostas
 - ✅ Logs consistentes em todos os models
 
