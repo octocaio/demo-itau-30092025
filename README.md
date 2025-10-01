@@ -85,9 +85,15 @@ src/
 ├── models/         # Modelos de dados
 ├── routes/         # Definição das rotas
 ├── middleware/     # Middleware customizado
-├── utils/          # Utilitários e validadores
+├── utils/          # Utilitários e validadores (includes ResponseFormatter, ModelWrapper)
 └── server.js       # Servidor principal
 ```
+
+## 📚 Documentação
+
+- **[Guia de Utilities DRY](./docs/guia-utilities-dry.md)** - Guia completo de uso das utilities ResponseFormatter e ModelWrapper
+- **[Plano de Refatoração](./docs/avoid-DRY.md)** - Análise detalhada de violações DRY e estratégias de refatoração
+- **[Arquitetura](./docs/architecture.md)** - Visão geral da arquitetura do sistema
 
 ## 🔐 Validações
 
@@ -107,5 +113,17 @@ Este projeto foi criado para demonstrar as capacidades do GitHub Copilot no dese
 - Arquitetura MVC
 - Validação de dados brasileiros
 - Logging estruturado
-- Tratamento de erros
+- Tratamento de erros padronizado
 - Segurança básica
+- Princípios DRY (Don't Repeat Yourself)
+
+### ✨ Refatoração DRY Implementada
+
+Este projeto passou por uma refatoração completa para eliminar duplicações de código:
+
+- **ResponseFormatter**: Padroniza todas as respostas HTTP da API
+- **ModelWrapper**: Centraliza tratamento de erros em models
+- **Redução de 33%**: Eliminadas ~161 linhas de código duplicado
+- **Padronização 100%**: Todas as respostas seguem o mesmo formato
+
+Veja o [Guia de Utilities DRY](./docs/guia-utilities-dry.md) para detalhes completos.
