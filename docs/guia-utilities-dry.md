@@ -327,8 +327,8 @@ class NovoModel {
             async () => {
                 const query = 'INSERT INTO tabela (campo) VALUES (?)';
                 const result = await database.run(query, [dados.campo]);
-                // result.id contém o ID gerado pelo SQLite
-                return await this.buscarPorId(result.id);
+                // result.lastID contém o ID gerado pelo SQLite
+                return await this.buscarPorId(result.lastID);
             },
             'criar registro',
             {
